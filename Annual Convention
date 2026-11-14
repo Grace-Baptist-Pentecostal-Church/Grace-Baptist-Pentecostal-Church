@@ -1,0 +1,175 @@
+index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Annual Convention - DP Generator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+    h2 { margin-top: 0; color: #222; }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    input[type="text"], input[type="file"] {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #2ea44f;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #2c974b; }
+    canvas {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Create Your Convention DP</h2>
+  <div class="controls">
+    <input type="file" id="photoInput" accept="image/*">
+    <input type="text" id="firstNameInput" placeholder="Enter First Name (e.g., JOHN)">
+    <input type="text" id="surnameInput" placeholder="Enter Surname (e.g., DOE)">
+    <button id="downloadBtn">Download Your DP</button>
+  </div>
+  <canvas id="dpCanvas"></canvas>
+</div>
+
+<script>
+  const canvas = document.getElementById('dpCanvas');
+  const ctx = canvas.getContext('2d');
+  const photoInput = document.getElementById('photoInput');
+  const firstNameInput = document.getElementById('firstNameInput');
+  const surnameInput = document.getElementById('surnameInput');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  // Load your uploaded flyer template (24.png)
+  const template = new Image();
+  template.src = '24.png';
+
+  let userPhoto = null;
+
+  // ADJUST THESE PERCENTAGES TO FIT YOUR 24.png BOX & TEXT BAR
+  const config = {
+    photoX: 0.215,      // Left edge of the photo box (21.5% from left)
+    photoY: 0.205,      // Top edge of the photo box (20.5% from top)
+    photoWidth: 0.565,  // Width of the photo box (56.5% of template width)
+    photoHeight: 0.355, // Height of the photo area above the black bar
+    nameX: 0.50,        // Center X for text (50% = dead center)
+    firstNameY: 0.585,  // Y position for First Name
+    surnameY: 0.610     // Y position for Surname
+  };
+
+  function drawDP() {
+    if (!template.complete) return;
+
+    canvas.width = template.width;
+    canvas.height = template.height;
+
+    // 1. Draw the base flyer
+    ctx.drawImage(template, 0, 0);
+
+    // 2. Draw the uploaded photo (cropped nicely to fit the box)
+    if (userPhoto) {
+      const boxX = canvas.width * config.photoX;
+      const boxY = canvas.height * config.photoY;
+      const boxW = canvas.width * config.photoWidth;
+      const boxH = canvas.height * config.photoHeight;
+
+      // Center-crop logic so faces aren't stretched
+      const imgRatio = userPhoto.width / userPhoto.height;
+      const boxRatio = boxW / boxH;
+      let drawW, drawH, offsetX, offsetY;
+
+      if (imgRatio > boxRatio) {
+        drawH = userPhoto.height;
+        drawW = userPhoto.height * boxRatio;
+        offsetX = (userPhoto.width - drawW) / 2;
+        offsetY = 0;
+      } else {
+        drawW = userPhoto.width;
+        drawH = userPhoto.width / boxRatio;
+        offsetX = 0;
+        offsetY = (userPhoto.height - drawH) / 2;
+      }
+
+      ctx.drawImage(userPhoto, offsetX, offsetY, drawW, drawH, boxX, boxY, boxW, boxH);
+    }
+
+    // 3. Draw the user's First Name and Surname
+    ctx.fillStyle = '#FFFFFF';
+    ctx.textAlign = 'center';
+
+    const firstName = firstNameInput.value.toUpperCase();
+    const surname = surnameInput.value.toUpperCase();
+
+    // Dynamic font sizing based on image width
+    ctx.font = `bold ${Math.floor(canvas.width * 0.032)}px sans-serif`;
+    ctx.fillText(firstName, canvas.width * config.nameX, canvas.height * config.firstNameY);
+
+    ctx.font = `${Math.floor(canvas.width * 0.022)}px sans-serif`;
+    ctx.fillText(surname, canvas.width * config.nameX, canvas.height * config.surnameY);
+  }
+
+  template.onload = drawDP;
+
+  photoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      userPhoto = new Image();
+      userPhoto.onload = drawDP;
+      userPhoto.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  firstNameInput.addEventListener('input', drawDP);
+  surnameInput.addEventListener('input', drawDP);
+
+  downloadBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'Convention-DP.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+</script>
+
+</body>
+</html>
